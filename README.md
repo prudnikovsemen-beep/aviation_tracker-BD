@@ -58,12 +58,48 @@ pytest --cov=src --cov-report=html
 ### 2 Настройка config.ini под параметры вашей БД
 ### 3 Запуск: python main.py
 
+## База данных
 
+Проект использует PostgreSQL. Схема базы данных описана в файле `db/schema.sql`.
+
+### Как инициализировать БД
+
+Если у вас ещё нет базы данных `aviation_db`, создайте её:
+
+```bash
+psql -h localhost -U postgres -c "CREATE DATABASE aviation_db;"
+
+### Затем примените схему (создайте таблицы и индексы):
+```bash
+psql -h localhost -U postgres -d aviation_db -f db/schema.sql
+
+### Что создано
+```bash
+Скрипт создаёт следующие объекты:
+
+countries — справочник стран с границами координат (для фильтрации по региону).
+Поля: name, code, lat_min/max, lon_min/max.
+aircrafts — текущие данные о воздушных судах.
+Ключевые поля: icao24 (уникальный идентификатор), callsign, origin_country, координаты, скорость, высота.
+Поле created_at заполняется автоматически.
+### Индексы для быстрого поиска:
+idx_aircrafts_icao24 — по уникальному коду борта (самый частый запрос).
+idx_aircrafts_callsign — по позывному.
+idx_aircrafts_velocity — для агрегаций и фильтров по скорости.
+
+###Проверка
+Убедитесь, что таблицы созданы, выполнив:
+```bash
+psql -h localhost -U postgres -d aviation_db -c "\dt"
+
+### Вы должны увидеть: countries и aircrafts.
 
 ## Структура проекта
 ```bash
 
 aviation_tracker/ 
+├── db/ 
+│    └── schema.sql — код для создания табл. БД 
 ├── src/ 
 │    ├── api/ 
 │    │ ├── nominatim_api.py — клиент Nominatim (координаты стран) 
