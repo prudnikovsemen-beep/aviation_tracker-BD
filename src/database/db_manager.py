@@ -1,26 +1,83 @@
+"""Менеджер базы данных для работы с PostgreSQL."""
+
 import psycopg2
 from psycopg2 import OperationalError
 from typing import List, Dict, Optional, Any
+from src.models.country import Country
+from src.models.aircraft import Aircraft
+
 
 class DBManager:
-    def __init__(self, db_config: Dict[str, str]):
+    """Подключается к PostgreSQL и выполняет CRUD-операции."""
+
+    def __init__(self, db_config: Dict[str, Any]):
         self.db_config = db_config
 
     def _get_connection(self):
         try:
             conn = psycopg2.connect(
-                host=self.db_config['host'],
-                port=int(self.db_config['port']),
-                dbname=self.db_config['dbname'],
-                user=self.db_config['user'],
-                password=self.db_config['password']
+                host=self.db_config["host"],
+                port=int(self.db_config["port"]),
+                dbname=self.db_config["dbname"],
+                user=self.db_config["user"],
+                password=self.db_config["password"],
             )
             return conn
         except OperationalError as e:
             print(f"Ошибка подключения к БД: {e}")
             raise
 
+    # --- Сохранение данных ---
+    def save_country(self, country: Country) -> None:
+        """Сохраняет страну в таблицу countries. Если страна уже есть — обновляет координаты."""
+        query = """
+            INSERT INTO countries (name, code, lamin, lamax, lomin, lomax)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (name) DO UPDATE SET
+                lamin = EXCLUDED.lamin,
+                lamax = EXCLUDED.lamax,
+                lomin = EXCLUDED.lomin,
+                lomax = EXCLUDED.lomax;
+        """
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (
+                    country.name, country.code,
+                    country.lamin, country.lamax,
+                    country.lomin, country.lomax
+                ))
+            conn.commit()
+
+    def save_aircraft(self, aircraft: Aircraft) -> None:
+        """Сохраняет самолёт в таблицу aircrafts. Обновляет, если icao24 уже есть."""
+        query = """
+            INSERT INTO aircrafts (icao24, callsign, origin_country, latitude, longitude,
+                                   velocity, baro_altitude, on_ground, true_track, vertical_rate)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (icao24) DO UPDATE SET
+                callsign = EXCLUDED.callsign,
+                origin_country = EXCLUDED.origin_country,
+                latitude = EXCLUDED.latitude,
+                longitude = EXCLUDED.longitude,
+                velocity = EXCLUDED.velocity,
+                baro_altitude = EXCLUDED.baro_altitude,
+                on_ground = EXCLUDED.on_ground,
+                true_track = EXCLUDED.true_track,
+                vertical_rate = EXCLUDED.vertical_rate;
+        """
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (
+                    aircraft.icao24, aircraft.callsign, aircraft.origin_country,
+                    aircraft.latitude, aircraft.longitude,
+                    aircraft.velocity, aircraft.baro_altitude,
+                    aircraft.on_ground, aircraft.true_track, aircraft.vertical_rate
+                ))
+            conn.commit()
+
+    # --- Получение данных (по заданию) ---
     def get_countries_and_aeroplanes_count(self) -> List[Dict[str, Any]]:
+        """Получает список всех стран и количество самолетов в их воздушных пространствах."""
         query = """
             SELECT c.name AS country_name, COUNT(a.id) AS aircraft_count
             FROM countries c
@@ -28,59 +85,49 @@ class DBManager:
             GROUP BY c.id, c.name
             ORDER BY aircraft_count DESC;
         """
-        try:
-            with self._get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(query)
-                    columns = [desc[0] for desc in cur.description]
-                    return [dict(zip(columns, row)) for row in cur.fetchall()]
-        except Exception as e:
-            print(f"Ошибка при получении статистики: {e}")
-            return []
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query)
+                columns = [desc[0] for desc in cur.description]
+                return [dict(zip(columns, row)) for row in cur.fetchall()]
+
+    def get_all_aeroplanes(self) -> List[Dict[str, Any]]:
+        """Получает список всех воздушных судов."""
+        query = "SELECT * FROM aircrafts;"
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query)
+                columns = [desc[0] for desc in cur.description]
+                return [dict(zip(columns, row)) for row in cur.fetchall()]
 
     def get_avg_speed(self) -> Optional[float]:
-        query = "SELECT AVG(velocity) FROM aircrafts;"
-        try:
-            with self._get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(query)
-                    result = cur.fetchone()
-                    return result[0] if result and result[0] is not None else None
-        except Exception as e:
-            print(f"Ошибка при расчете средней скорости: {e}")
-            return None
+        """Получает среднюю скорость по самолётам."""
+        query = "SELECT AVG(velocity) FROM aircrafts WHERE velocity IS NOT NULL;"
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query)
+                result = cur.fetchone()
+                return result[0] if result and result[0] is not None else None
 
-    def get_aeroplanes_with_higher_speed(self, threshold: float) -> List[Dict[str, Any]]:
-        query = """
-            SELECT id, icao24, callsign, velocity, latitude, longitude
-            FROM aircrafts
-            WHERE velocity > %s
-            ORDER BY velocity DESC;
-        """
-        try:
-            with self._get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(query, (threshold,))
-                    columns = [desc[0] for desc in cur.description]
-                    return [dict(zip(columns, row)) for row in cur.fetchall()]
-        except Exception as e:
-            print(f"Ошибка поиска быстрых самолётов: {e}")
+    def get_aeroplanes_with_higher_speed(self) -> List[Dict[str, Any]]:
+        """Получает список самолётов, у которых скорость выше средней."""
+        avg = self.get_avg_speed()
+        if avg is None:
             return []
+
+        query = "SELECT * FROM aircrafts WHERE velocity > %s;"
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (avg,))
+                columns = [desc[0] for desc in cur.description]
+                return [dict(zip(columns, row)) for row in cur.fetchall()]
 
     def get_aeroplanes_with_keyword(self, keyword: str) -> List[Dict[str, Any]]:
+        """Получает самолёты, в позывном которых есть заданные символы."""
         search_pattern = f"%{keyword}%"
-        query = """
-            SELECT id, icao24, callsign, velocity
-            FROM aircrafts
-            WHERE callsign ILIKE %s
-            LIMIT 20;
-        """
-        try:
-            with self._get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(query, (search_pattern,))
-                    columns = [desc[0] for desc in cur.description]
-                    return [dict(zip(columns, row)) for row in cur.fetchall()]
-        except Exception as e:
-            print(f"Ошибка поиска по ключевому слову: {e}")
-            return []
+        query = "SELECT * FROM aircrafts WHERE callsign ILIKE %s LIMIT 20;"
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (search_pattern,))
+                columns = [desc[0] for desc in cur.description]
+                return [dict(zip(columns, row)) for row in cur.fetchall()]
