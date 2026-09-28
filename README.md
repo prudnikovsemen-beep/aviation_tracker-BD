@@ -89,10 +89,7 @@ idx_aircrafts_velocity — для агрегаций и фильтров по с
 
 ### Проверка
 Убедитесь, что таблицы созданы, выполнив:
-
-psql -h localhost -U postgres -d aviation_db -c "\dt"
-
-### Вы должны увидеть: countries и aircrafts.
+ Вы должны увидеть табл.: countries и aircrafts.
 
 ## Структура проекта
 ```bash
