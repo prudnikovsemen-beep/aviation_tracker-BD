@@ -99,7 +99,7 @@ psql -h localhost -U postgres -d aviation_db -c "\dt"
 
 aviation_tracker/ 
 ├── db/ 
-│    └── schema.sql — код для создания табл. БД 
+│    └── schema.sql — код для создания табл. БД в pgAdmin4
 ├── src/ 
 │    ├── api/ 
 │    │ ├── nominatim_api.py — клиент Nominatim (координаты стран) 
