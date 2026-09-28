@@ -50,7 +50,7 @@
 - Тестируются все ключевые модули: модели, API-клиенты, менеджер БД, сервис.
 
 Для генерации отчёта о покрытии:
-```powershell
+
 pytest --cov=src --cov-report=html
 
 ## Запуск проекта
@@ -66,15 +66,15 @@ pytest --cov=src --cov-report=html
 
 Если у вас ещё нет базы данных `aviation_db`, создайте её:
 
-```bash
+
 psql -h localhost -U postgres -c "CREATE DATABASE aviation_db;"
 
 ### Затем примените схему (создайте таблицы и индексы):
-```bash
+
 psql -h localhost -U postgres -d aviation_db -f db/schema.sql
 
 ### Что создано
-```bash
+
 Скрипт создаёт следующие объекты:
 
 countries — справочник стран с границами координат (для фильтрации по региону).
@@ -87,9 +87,9 @@ idx_aircrafts_icao24 — по уникальному коду борта (сам
 idx_aircrafts_callsign — по позывному.
 idx_aircrafts_velocity — для агрегаций и фильтров по скорости.
 
-###Проверка
+### Проверка
 Убедитесь, что таблицы созданы, выполнив:
-```bash
+
 psql -h localhost -U postgres -d aviation_db -c "\dt"
 
 ### Вы должны увидеть: countries и aircrafts.
