@@ -3,6 +3,8 @@
 import psycopg2
 from psycopg2 import OperationalError
 from typing import List, Dict, Optional, Any
+from psycopg2.extensions import connection
+
 from src.models.country import Country
 from src.models.aircraft import Aircraft
 
@@ -13,7 +15,8 @@ class DBManager:
     def __init__(self, db_config: Dict[str, Any]):
         self.db_config = db_config
 
-    def _get_connection(self):
+    def _get_connection(self) -> connection:
+        """Возвращает активное соединение с БД."""
         try:
             conn = psycopg2.connect(
                 host=self.db_config["host"],
@@ -41,11 +44,10 @@ class DBManager:
         """
         with self._get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(query, (
-                    country.name, country.code,
-                    country.lamin, country.lamax,
-                    country.lomin, country.lomax
-                ))
+                cur.execute(
+                    query,
+                    (country.name, country.code, country.lamin, country.lamax, country.lomin, country.lomax),
+                )
             conn.commit()
 
     def save_aircraft(self, aircraft: Aircraft) -> None:
@@ -67,12 +69,21 @@ class DBManager:
         """
         with self._get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(query, (
-                    aircraft.icao24, aircraft.callsign, aircraft.origin_country,
-                    aircraft.latitude, aircraft.longitude,
-                    aircraft.velocity, aircraft.baro_altitude,
-                    aircraft.on_ground, aircraft.true_track, aircraft.vertical_rate
-                ))
+                cur.execute(
+                    query,
+                    (
+                        aircraft.icao24,
+                        aircraft.callsign,
+                        aircraft.origin_country,
+                        aircraft.latitude,
+                        aircraft.longitude,
+                        aircraft.velocity,
+                        aircraft.baro_altitude,
+                        aircraft.on_ground,
+                        aircraft.true_track,
+                        aircraft.vertical_rate,
+                    ),
+                )
             conn.commit()
 
     # --- Получение данных (по заданию) ---
@@ -88,6 +99,7 @@ class DBManager:
         with self._get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(query)
+                assert cur.description is not None
                 columns = [desc[0] for desc in cur.description]
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
 
@@ -97,6 +109,7 @@ class DBManager:
         with self._get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(query)
+                assert cur.description is not None
                 columns = [desc[0] for desc in cur.description]
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
 
@@ -119,6 +132,7 @@ class DBManager:
         with self._get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(query, (avg,))
+                assert cur.description is not None
                 columns = [desc[0] for desc in cur.description]
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
 
@@ -129,5 +143,20 @@ class DBManager:
         with self._get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(query, (search_pattern,))
+                assert cur.description is not None
                 columns = [desc[0] for desc in cur.description]
                 return [dict(zip(columns, row)) for row in cur.fetchall()]
+
+    def get_connection(self) -> connection:
+        """Публичный метод для получения соединения (удобно для тестов)."""
+        return self._get_connection()
+
+    def get_country_by_name(self, name: str) -> Optional[Country]:
+        """Возвращает страну по имени или None, если не найдена."""
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT name, code, lamin, lamax, lomin, lomax FROM countries WHERE name = %s", (name,))
+                row = cur.fetchone()
+                if row:
+                    return Country(name=row[0], code=row[1], lamin=row[2], lamax=row[3], lomin=row[4], lomax=row[5])
+                return None

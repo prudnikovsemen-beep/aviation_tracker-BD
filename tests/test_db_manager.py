@@ -10,7 +10,7 @@ DB_CONFIG = {
     "port": 5432,
     "dbname": "aviation_tracker",
     "user": "postgres",
-    "password": "твой_пароль"  # <-- ВСТАВЬ СЮДА СВОЙ ПАРОЛЬ ОТ БД
+    "password": "******"  # <-- ВСТАВЬ СЮДА СВОЙ ПАРОЛЬ ОТ БД
 }
 
 

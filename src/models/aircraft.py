@@ -9,26 +9,12 @@ from typing import Optional
 class Aircraft:
     """
     Модель воздушного судна на основе данных из OpenSky API states.
-
-    Хранит ключевые параметры полёта: координаты, скорость, высоту,
-    позывной и статус нахождения на земле.
-
-    Attributes:
-        icao24 (str): Уникальный идентификатор самолёта (ICAO 24-bit).
-        callsign (str): Позывной воздушного судна.
-        origin_country (Optional[str]): Страна регистрации/происхождения.
-        longitude (float): Текущая долгота.
-        latitude (float): Текущая широта.
-        baro_altitude (Optional[float]): Барометрическая высота (м).
-        on_ground (bool): Флаг, находится ли самолёт на земле.
-        velocity (Optional[float]): Скорость (м/с).
-        true_track (Optional[float]): Истинный курс (градусы).
-        vertical_rate (Optional[float]): Вертикальная скорость (м/с).
-        last_seen (Optional[datetime]): Время последнего обновления данных.
     """
 
     icao24: str
-    callsign: str
+    # Было: callsign: str
+    # Стало: Optional[str], чтобы принимать None из API
+    callsign: Optional[str] = None
     origin_country: Optional[str] = None
     longitude: float = 0.0
     latitude: float = 0.0
@@ -38,3 +24,14 @@ class Aircraft:
     true_track: Optional[float] = None
     vertical_rate: Optional[float] = None
     last_seen: Optional[datetime] = None
+
+    def __post_init__(self) -> None:
+        """
+        Гарантирует, что callsign всегда будет строкой (даже если передали None).
+        Это убирает необходимость проверять callsign на None в остальной части кода.
+        """
+        if self.callsign is None:
+            self.callsign = ""
+        else:
+            # На случай, если передали строку с пробелами — убираем лишние
+            self.callsign = self.callsign.strip()

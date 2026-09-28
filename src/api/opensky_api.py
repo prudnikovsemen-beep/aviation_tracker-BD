@@ -1,7 +1,8 @@
 """Модуль для получения данных о самолётах через OpenSky API."""
 
 import requests
-from typing import List
+from typing import Any, List
+
 from src.models.aircraft import Aircraft
 
 
@@ -15,9 +16,7 @@ class OpenSkyAPI:
         if username and password:
             self.session.auth = (username, password)
 
-    def get_aircrafts_in_bbox(
-        self, lamin: float, lomin: float, lamax: float, lomax: float
-    ) -> List[Aircraft]:
+    def get_aircrafts_in_bbox(self, lamin: float, lomin: float, lamax: float, lomax: float) -> List[Aircraft]:
         params = {"lamin": lamin, "lomin": lomin, "lamax": lamax, "lomax": lomax}
 
         try:
@@ -34,10 +33,14 @@ class OpenSkyAPI:
             return []
 
     @staticmethod
-    def _parse_state(state: list) -> Aircraft:
+    def _parse_state(state: list[Any]) -> Aircraft:
+        # Передаём callsign как есть (может быть None).
+        # Очистка и превращение в строку происходит в Aircraft.__post_init__.
+        callsign_raw = state[1]
+
         return Aircraft(
             icao24=state[0] or "",
-            callsign=state[1].strip() if state[1] else None,
+            callsign=callsign_raw,
             origin_country=state[2] or "",
             latitude=state[6],
             longitude=state[5],

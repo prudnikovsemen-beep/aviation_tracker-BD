@@ -1,6 +1,8 @@
 """Модуль для получения географических координат стран через Nominatim API."""
 
 import requests
+from typing import Dict, Any
+
 from src.models.country import Country
 
 
@@ -14,7 +16,8 @@ class NominatimAPI:
         self.session.headers.update({"User-Agent": user_agent})
 
     def get_country_bounding_box(self, country_name: str, country_code: str) -> Country | None:
-        params = {
+        # Явная типизация словаря — это убирает ошибку mypy про dict[str, object]
+        params: Dict[str, Any] = {
             "q": country_name,
             "format": "json",
             "limit": 1,

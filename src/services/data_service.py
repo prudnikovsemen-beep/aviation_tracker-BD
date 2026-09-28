@@ -1,6 +1,6 @@
 """Сервисный слой: связывает API и базу данных."""
 
-from typing import List
+from typing import List, Dict, Any
 import time
 
 from src.api.nominatim_api import NominatimAPI
@@ -29,15 +29,10 @@ class DataService:
         ("Turkey", "TR"),
     ]
 
-    def fetch_and_save_aircrafts(self, countries):
-        db = DBManager(self.db_config)
-
-        # Очищаем только таблицу aircrafts, страны не трогаем
-        with db.get_connection().cursor() as cur:
-            cur.execute("TRUNCATE TABLE aircrafts RESTART IDENTITY;")
-    def __init__(self, db_config: dict, debug_mode: bool = False):
+    def __init__(self, db_config: Dict[str, Any], debug_mode: bool = False):
         self.nominatim = NominatimAPI()
         self.opensky = OpenSkyAPI()
+        # Используем тот же DBManager, что передан в конфиге, не создаём новый
         self.db = DBManager(db_config)
         # Выбираем список стран в зависимости от режима
         self.countries_list = self.DEBUG_COUNTRIES if debug_mode else self.ALL_COUNTRIES
@@ -60,6 +55,11 @@ class DataService:
     def fetch_and_save_aircrafts(self, countries: List[Country]) -> List[Aircraft]:
         all_aircrafts = []
 
+        # Очищаем таблицу перед загрузкой — делаем это один раз, до цикла
+        with self.db.get_connection().cursor() as cur:
+            cur.execute("TRUNCATE TABLE aircrafts RESTART IDENTITY;")
+        print("🧹 Таблица aircrafts очищена, счётчик ID сброшен.")
+
         for i, country in enumerate(countries, start=1):
             print(f"[{i}/{len(countries)}] Запрос для {country.name}...", end=" ", flush=True)
 
@@ -78,7 +78,7 @@ class DataService:
         print(f"✅ Всего сохранено судов: {len(all_aircrafts)}")
         return all_aircrafts
 
-    def run(self):
+    def run(self) -> None:
         countries = self.fetch_and_save_countries()
         if countries:
             self.fetch_and_save_aircrafts(countries)

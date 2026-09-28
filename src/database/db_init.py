@@ -3,6 +3,7 @@
 import psycopg2
 from psycopg2 import OperationalError
 from typing import Dict, Any
+from psycopg2.extensions import connection
 
 
 class DBInitializer:
@@ -11,7 +12,7 @@ class DBInitializer:
     def __init__(self, db_config: Dict[str, Any]):
         self.db_config = db_config
 
-    def _get_connection(self):
+    def _get_connection(self) -> connection:  # <-- добавили тип возврата
         try:
             conn = psycopg2.connect(
                 host=self.db_config["host"],
@@ -35,7 +36,8 @@ class DBInitializer:
                 cur.execute("DROP TABLE IF EXISTS countries CASCADE;")
 
                 # 2. Создаём countries (с UNIQUE на name)
-                cur.execute("""
+                cur.execute(
+                    """
                     CREATE TABLE countries (
                         id SERIAL PRIMARY KEY,
                         name VARCHAR(100) NOT NULL UNIQUE,
@@ -45,10 +47,12 @@ class DBInitializer:
                         lomin DOUBLE PRECISION NOT NULL,
                         lomax DOUBLE PRECISION NOT NULL
                     );
-                """)
+                """
+                )
 
                 # 3. Создаём aircrafts (с UNIQUE на icao24)
-                cur.execute("""
+                cur.execute(
+                    """
                     CREATE TABLE aircrafts (
                         id SERIAL PRIMARY KEY,
                         icao24 VARCHAR(8) NOT NULL UNIQUE,
@@ -62,7 +66,8 @@ class DBInitializer:
                         true_track DOUBLE PRECISION,
                         vertical_rate DOUBLE PRECISION
                     );
-                """)
+                """
+                )
 
             conn.commit()
             print("✅ Таблицы успешно пересозданы с уникальными ограничениями.")
