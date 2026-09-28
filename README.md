@@ -63,40 +63,6 @@ pytest --cov=src --cov-report=html
 ## Структура проекта
 ```bash
 
-aviation_tracker/
-├── /src
-│   ├── api/
-│   │   ├── nominatim_api.py     — клиент Nominatim (координаты стран)
-│   │   └── opensky_api.py       — клиент OpenSky (данные о самолётах)
-│   ├── database/
-
-│   │   ├── db_init.py           — создание таблиц (DDL)
-│   │   └── db_manager.py        — класс DBManager (запросы к БД)
-│   ├── models/
-│   │   ├── country.py           — модель Country
-│   │   └── aircraft.py          — модель Aircraft
-│   ├── services/
-│   │   └── data_service.py      — оркестрация: API → БД
-│   └── utils/
-│       └── config.py            — загрузка конфигурации из config.ini
-├── tests/
-│   ├── conftest.py              — общие фикстуры
-│   ├── test_models.py           — тесты Country и Aircraft
-│   ├── test_nominatim_api.py    — тесты NominatimAPI
-│   ├── test_opensky_api.py      — тесты OpenSkyAPI
-│   ├── test_db_manager.py       — тесты DBManager
-│   ├── test_db_init.py          — тесты DBInitializer
-│   ├── test_db_config.py        — тесты DatabaseConnection и load_config
-│   └── test_data_service.py     — тесты DataService
-├── main.py                      — точка входа
-├── config.ini                   — управление подключением к PostgreSQL
-├── config.ini.example           — пример конфигурации БД
-├── requirements.txt             — зависимости
-├── pytest.ini                   — конфигурация pytest с покрытием
-├── .coveragerc                  — конфигурация coverage
-├── .gitignore                   — исключения git
-├── fix_constraints.py           — 
-└── README.md                    — документация
 aviation_tracker/ 
 ├── src/ 
 │    ├── api/ 
