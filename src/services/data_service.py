@@ -29,6 +29,12 @@ class DataService:
         ("Turkey", "TR"),
     ]
 
+    def fetch_and_save_aircrafts(self, countries):
+        db = DBManager(self.db_config)
+
+        # Очищаем только таблицу aircrafts, страны не трогаем
+        with db.get_connection().cursor() as cur:
+            cur.execute("TRUNCATE TABLE aircrafts RESTART IDENTITY;")
     def __init__(self, db_config: dict, debug_mode: bool = False):
         self.nominatim = NominatimAPI()
         self.opensky = OpenSkyAPI()
