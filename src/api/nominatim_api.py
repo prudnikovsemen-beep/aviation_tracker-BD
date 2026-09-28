@@ -1,48 +1,24 @@
-"""Модуль клиента для работы с Nominatim API (OpenStreetMap)."""
+"""Модуль для получения географических координат стран через Nominatim API."""
 
 import requests
-from typing import List, Optional
 from src.models.country import Country
 
 
 class NominatimAPI:
-    """
-    Клиент для получения географических координат стран через Nominatim.
-
-    Основная задача — получить bounding box (границы) страны, чтобы затем
-    запрашивать самолёты в этом регионе через OpenSky API.
-    """
+    """Клиент для работы с Nominatim OpenStreetMap API."""
 
     BASE_URL = "https://nominatim.openstreetmap.org/search"
 
-    def __init__(self, user_agent: str):
-        """
-        Инициализация клиента.
-
-        Args:
-            user_agent (str): Значение заголовка User-Agent, обязательное для Nominatim.
-        """
+    def __init__(self, user_agent: str = "aviation_tracker/1.0"):
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": user_agent})
 
-    def get_country_bounding_box(self, country_name: str) -> Optional[Country]:
-        """
-        Получает границы (bounding box) для указанной страны.
-
-        Nominatim возвращает bounding box в формате [юг, север, запад, восток].
-        Мы преобразуем это в (lamin, lamax, lomin, lomax) для OpenSky.
-
-        Args:
-            country_name (str): Название страны (например, 'Russia', 'Kazakhstan').
-
-        Returns:
-            Optional[Country]: Объект Country с заполненными границами или None, если не найдено.
-        """
+    def get_country_bounding_box(self, country_name: str, country_code: str) -> Country | None:
         params = {
             "q": country_name,
             "format": "json",
             "limit": 1,
-            "countrycodes": "",  # можно оставить пустым, чтобы искать по названию
+            "countrycodes": country_code.lower(),
         }
 
         try:
@@ -53,22 +29,19 @@ class NominatimAPI:
             if not data:
                 return None
 
-            place = data[0]
-            # Nominatim boundingbox: [south, north, west, east]
-            bounding_box = place.get("boundingbox")
-            if not bounding_box or len(bounding_box) != 4:
+            item = data[0]
+            bbox = item.get("boundingbox")
+            if not bbox or len(bbox) < 4:
                 return None
 
-            lamin, lamax, lomin, lomax = map(float, bounding_box)
-
             return Country(
-                name=place.get("display_name", country_name),
-                code=place.get("country_code"),
-                lamin=lamin,
-                lamax=lamax,
-                lomin=lomin,
-                lomax=lomax,
+                name=country_name,
+                code=country_code.upper(),
+                lamin=float(bbox[0]),
+                lamax=float(bbox[1]),
+                lomin=float(bbox[2]),
+                lomax=float(bbox[3]),
             )
-        except (requests.RequestException, ValueError, IndexError, KeyError) as e:
-            # Для курсовой лучше логировать ошибку, но пока просто возвращаем None
+        except (requests.RequestException, ValueError, KeyError) as e:
+            print(f"Ошибка при получении координат для {country_name}: {e}")
             return None
