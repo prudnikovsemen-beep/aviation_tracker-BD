@@ -21,7 +21,7 @@ class OpenSkyAPI:
         params = {"lamin": lamin, "lomin": lomin, "lamax": lamax, "lomax": lomax}
 
         try:
-            response = self.session.get(self.BASE_URL, params=params, timeout=30)
+            response = self.session.get(self.BASE_URL, params=params, timeout=15)
             response.raise_for_status()
             data = response.json()
 

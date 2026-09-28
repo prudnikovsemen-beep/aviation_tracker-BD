@@ -6,13 +6,9 @@ from typing import Dict, Any
 
 
 class DBInitializer:
-    """Создаёт таблицы в PostgreSQL, если их нет."""
+    """Создаёт таблицы в PostgreSQL, полностью пересоздавая их для гарантии ограничений."""
 
     def __init__(self, db_config: Dict[str, Any]):
-        """
-        Args:
-            db_config: Словарь с параметрами подключения.
-        """
         self.db_config = db_config
 
     def _get_connection(self):
@@ -30,13 +26,17 @@ class DBInitializer:
             raise
 
     def create_tables(self) -> None:
-        """Создаёт таблицы countries и aircrafts, если они не существуют."""
+        """Удаляет старые таблицы и создаёт новые с UNIQUE ограничениями."""
         conn = self._get_connection()
         try:
             with conn.cursor() as cur:
-                # Таблица стран
+                # 1. Удаляем старые таблицы (гарантируем чистый старт)
+                cur.execute("DROP TABLE IF EXISTS aircrafts CASCADE;")
+                cur.execute("DROP TABLE IF EXISTS countries CASCADE;")
+
+                # 2. Создаём countries (с UNIQUE на name)
                 cur.execute("""
-                    CREATE TABLE IF NOT EXISTS countries (
+                    CREATE TABLE countries (
                         id SERIAL PRIMARY KEY,
                         name VARCHAR(100) NOT NULL UNIQUE,
                         code CHAR(2) NOT NULL,
@@ -47,24 +47,26 @@ class DBInitializer:
                     );
                 """)
 
-                # Таблица самолётов
+                # 3. Создаём aircrafts (с UNIQUE на icao24)
                 cur.execute("""
-                    CREATE TABLE IF NOT EXISTS aircrafts (
+                    CREATE TABLE aircrafts (
                         id SERIAL PRIMARY KEY,
-                        icao24 VARCHAR(8) NOT NULL,
+                        icao24 VARCHAR(8) NOT NULL UNIQUE,
                         callsign VARCHAR(20),
                         origin_country VARCHAR(100),
                         latitude DOUBLE PRECISION,
                         longitude DOUBLE PRECISION,
                         velocity DOUBLE PRECISION,
                         baro_altitude DOUBLE PRECISION,
-                        on_ground BOOLEAN NOT NULL,
+                        on_ground BOOLEAN NOT NULL DEFAULT FALSE,
                         true_track DOUBLE PRECISION,
                         vertical_rate DOUBLE PRECISION
                     );
                 """)
+
             conn.commit()
-            print("✅ Таблицы успешно созданы или уже существуют.")
+            print("✅ Таблицы успешно пересозданы с уникальными ограничениями.")
+
         except Exception as e:
             conn.rollback()
             print(f"❌ Ошибка при создании таблиц: {e}")
