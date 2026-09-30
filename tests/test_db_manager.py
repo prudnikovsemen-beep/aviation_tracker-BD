@@ -7,10 +7,10 @@ from src.models.country import Country
 # --- ВРЕМЕННОЕ РЕШЕНИЕ: жёстко прописываем конфиг, чтобы обойти UnicodeDecodeError ---
 DB_CONFIG = {
     "host": "localhost",
-    "port": 5432,
+    "port": "5432",
     "dbname": "aviation_tracker",
     "user": "postgres",
-    "password": "******"  # <-- ВСТАВЬ СЮДА СВОЙ ПАРОЛЬ ОТ БД
+    "password": "ваш_пароль"  # <-- ВСТАВЬ СЮДА СВОЙ ПАРОЛЬ ОТ БД
 }
 
 

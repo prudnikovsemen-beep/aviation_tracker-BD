@@ -9,7 +9,7 @@ DB_CONFIG = {
     "port": 5432,
     "dbname": "test",
     "user": "postgres",
-    "password": "secret",
+    "password": "ваш_пароль",
 }
 
 
