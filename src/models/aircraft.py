@@ -9,13 +9,14 @@ from typing import Optional
 class Aircraft:
     """
     Модель воздушного судна на основе данных из OpenSky API states.
+    Поле current_country_code хранит код страны, в воздушном пространстве которой
+    находится борт (определяется по bounding box координат).
     """
 
     icao24: str
-    # Было: callsign: str
-    # Стало: Optional[str], чтобы принимать None из API
     callsign: Optional[str] = None
     origin_country: Optional[str] = None
+    current_country_code: Optional[str] = None  # <-- добавили: страна по координатам
     longitude: float = 0.0
     latitude: float = 0.0
     baro_altitude: Optional[float] = None
