@@ -12,11 +12,32 @@ class OpenSkyAPI:
     BASE_URL = "https://opensky-network.org/api/states/all"
 
     def __init__(self, username: str | None = None, password: str | None = None):
+        """
+        Инициализирует HTTP-сессию. При наличии учётных данных OpenSky
+        используется базовая авторизация (повышает лимит запросов).
+
+        Args:
+            username (str | None): Имя пользователя OpenSky (опционально).
+            password (str | None): Пароль OpenSky (опционально).
+        """
         self.session = requests.Session()
         if username and password:
             self.session.auth = (username, password)
 
     def get_aircrafts_in_bbox(self, lamin: float, lomin: float, lamax: float, lomax: float) -> List[Aircraft]:
+        """
+        Получает список воздушных судов в заданном bounding box через OpenSky API.
+
+        Args:
+            lamin (float): Минимальная широта.
+            lomin (float): Минимальная долгота.
+            lamax (float): Максимальная широта.
+            lomax (float): Максимальная долгота.
+
+        Returns:
+            List[Aircraft]: Список объектов Aircraft. Пустой список, если
+                            данных нет или произошла ошибка запроса.
+        """
         params = {"lamin": lamin, "lomin": lomin, "lamax": lamax, "lomax": lomax}
 
         try:
@@ -34,8 +55,20 @@ class OpenSkyAPI:
 
     @staticmethod
     def _parse_state(state: list[Any]) -> Aircraft:
-        # Передаём callsign как есть (может быть None).
-        # Очистка и превращение в строку происходит в Aircraft.__post_init__.
+        """
+        Преобразует сырой массив состояний из OpenSky API в объект Aircraft.
+
+        Индексы массива states (по документации OpenSky):
+            0 — icao24, 1 — callsign, 2 — origin_country,
+            5 — longitude, 6 — latitude, 7 — baro_altitude,
+            8 — on_ground, 9 — velocity, 10 — true_track, 11 — vertical_rate.
+
+        Args:
+            state (list[Any]): Сырой массив данных одного судна из OpenSky.
+
+        Returns:
+            Aircraft: Объект воздушного судна с заполненными полями.
+        """
         callsign_raw = state[1]
 
         return Aircraft(

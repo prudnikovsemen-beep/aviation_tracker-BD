@@ -53,12 +53,14 @@ class DBManager:
     def save_aircraft(self, aircraft: Aircraft) -> None:
         """Сохраняет самолёт в таблицу aircrafts. Обновляет, если icao24 уже есть."""
         query = """
-            INSERT INTO aircrafts (icao24, callsign, origin_country, latitude, longitude,
-                                   velocity, baro_altitude, on_ground, true_track, vertical_rate)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO aircrafts (icao24, callsign, origin_country, current_country_code,
+                                   latitude, longitude, velocity, baro_altitude,
+                                   on_ground, true_track, vertical_rate)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (icao24) DO UPDATE SET
                 callsign = EXCLUDED.callsign,
                 origin_country = EXCLUDED.origin_country,
+                current_country_code = EXCLUDED.current_country_code,
                 latitude = EXCLUDED.latitude,
                 longitude = EXCLUDED.longitude,
                 velocity = EXCLUDED.velocity,
@@ -75,6 +77,7 @@ class DBManager:
                         aircraft.icao24,
                         aircraft.callsign,
                         aircraft.origin_country,
+                        aircraft.current_country_code,
                         aircraft.latitude,
                         aircraft.longitude,
                         aircraft.velocity,
@@ -86,13 +89,51 @@ class DBManager:
                 )
             conn.commit()
 
+    # --- Определение страны по координатам ---
+    def get_country_code_by_coords(self, latitude: Optional[float], longitude: Optional[float]) -> Optional[str]:
+        """
+        Определяет код страны по координатам самолёта.
+        Проверяет, в какой bounding box страны попадают координаты.
+
+        Args:
+            latitude (Optional[float]): Широта самолёта.
+            longitude (Optional[float]): Долгота самолёта.
+
+        Returns:
+            Optional[str]: Код страны (например, 'RU') или None, если координаты
+                           не попадают ни в одну страну из справочника.
+        """
+        if latitude is None or longitude is None:
+            return None
+
+        query = """
+            SELECT code FROM countries
+            WHERE lamin <= %s AND lamax >= %s
+              AND lomin <= %s AND lomax >= %s
+            LIMIT 1;
+        """
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (latitude, latitude, longitude, longitude))
+                row = cur.fetchone()
+                return row[0] if row else None
+
     # --- Получение данных (по заданию) ---
     def get_countries_and_aeroplanes_count(self) -> List[Dict[str, Any]]:
-        """Получает список всех стран и количество самолетов в их воздушных пространствах."""
+        """
+        Получает список всех стран и количество самолётов в их воздушных пространствах.
+        Связь выполняется по полю current_country_code (страна, в границах которой
+        находится самолёт), а не по origin_country (страна регистрации).
+
+        Returns:
+            List[Dict[str, Any]]: Список словарей вида
+            [{"country_name": "Россия", "aircraft_count": 12}, ...],
+            отсортированный по убыванию количества самолётов.
+        """
         query = """
             SELECT c.name AS country_name, COUNT(a.id) AS aircraft_count
             FROM countries c
-            LEFT JOIN aircrafts a ON c.name = a.origin_country
+            LEFT JOIN aircrafts a ON c.code = a.current_country_code
             GROUP BY c.id, c.name
             ORDER BY aircraft_count DESC;
         """
