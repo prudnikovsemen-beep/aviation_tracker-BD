@@ -1,4 +1,5 @@
-# Aircraft tracker
+# “ETL service for aggregating data from OpenSky Network: collection, enrichment with geodata, normalization, loading into the database.”
+# «ETL‑сервис для агрегации данных OpenSky Network: сбор, обогащение геоданными, нормализация, загрузка в БД»
 
 #
 ## Ключевые архитектурные решения (SOLID)
